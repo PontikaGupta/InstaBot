@@ -74,18 +74,6 @@ def recent_post():
         print "Status code other than 200 received!"
 
 
-''' request_url = (BASE_URL + 'users/self/media/recent/?access_token=%s') % (APP_ACCESS_TOKEN)
-    #print 'GET request url : %s' % (request_url)
-    user_info = requests.get(request_url).json()
-    if user_info['meta']['code'] == 200:
-        if len(user_info['data'])>0:
-            print "User's id : " + user_info['data'][0]['id']
-            print "User's recent post : " + user_info['data'][0]['images']['standard_resolution']['url']
-
-        else:
-            print "No Post to show"
-
-    print "recent Post"'''
 
 #-----------------------------------------------------------------------------------------------------------------------#
 
@@ -99,18 +87,6 @@ def get_user_id(user_name):
             return None
     else:
         print "Status code other than 200 received!"
-
-
-''' request_url = (BASE_URL+'users/search?q=%s&access_token=%s') % (username, APP_ACCESS_TOKEN)
-    #print 'GET request url : %s' % (request_url)
-    username = requests.get(request_url).json()
-    if username['meta']['code'] == 200:
-        if len(username['data']):
-            return username['data'][0]['id']
-        else:
-            return None
-    else:
-        print "Result not found"'''
 
 #-----------------------------------------------------------------------------------------------------------------------#
 #Function defines to fetch other user info.
@@ -137,44 +113,102 @@ def other_user_info(user_name):
                 print "No info. exists of this user!"
         else:
             print "Status code other than 200 received!"
+#-----------------------------------------------------------------------------------------------------------------------#
 
-    '''user_id=get_user_id(user_name)
-    request_url = (BASE_URL+ ' users/%s/?access_token=%s') % (user_id ,APP_ACCESS_TOKEN)
-    #print 'GET request url : %s' % (request_url)
-    user_info = requests.get(request_url).json()
-
-    if user_info['meta']['code'] == 200:
-        print "User's Name : " + user_info['data']['username']
-        print "user Follows : " + str(user_info['data']['counts']['follows'])
-        print "User's Followers : " + str(user_info['data']['counts']['followed_by'])
-        print "User's posts : " + user_info['data']['counts']['media']
-
+def  get_user_post(u_name):
+    user_id = get_user_id(u_name)
+    if user_id is None:
+        print "User does not exist!"
+        exit()
     else:
-        print 'Status code other than 200 received'''
-
-#-----------------------------------------------------------------------------------------------------------------------#
-
-def  user_recent_post(uname):
-    user_id = get_user_id(uname)
-    request_url = ('%s users/%s/media/recent/?access_token=%s') % (BASE_URL,user_id,APP_ACCESS_TOKEN)
-   # print 'GET request url : %s' % (request_url)
-    user_info = requests.get(request_url).json()
-    if user_info['meta']['code'] == 200:
-        if len(user_info['data'])>0:
-            print "User's id : " + user_info['data'][0]['id']
-            print "User's recent post : " + user_info['data'][0]['images']['standard_resolution']['url']
-
+        post = requests.get('%susers/%s/media/recent/?access_token=%s' % (BASE_URL, user_id, APP_ACCESS_TOKEN)).json()
+        if post['meta']['code'] == 200:
+            if len(post['data']):
+                r = post['data'][0]['images']['standard_resolution']['url']
+                print "\n URL of post   :: " + r
+                if post['data'][0]['caption']:
+                    caption = post['data'][0]['caption']['text']
+                    print "Caption  :: "+ caption
+                else:
+                    print "No caption of this post!"
+            else:
+                print "This User have no posts "
         else:
-            print "No Post to show"
+            print "Status code other than 200 received!"
 
-    print "recent Post"
 
 #-----------------------------------------------------------------------------------------------------------------------#
+def dwnld_user_post(u_name):
+    user_id = get_user_id(u_name)
+    if user_id is None:
+        print "User does not exist!"
+        exit()
+    else:
+        post = requests.get('%susers/%s/media/recent/?access_token=%s' % (BASE_URL, user_id, APP_ACCESS_TOKEN)).json()
+        if post['meta']['code'] == 200:
+            # To Check post exist or not
+            if len(post['data']) > 0:
+                if post['data'][0]['type'] == "image":  # Checking if the post is an image or not
+                    image_name = post['data'][0]['id'] + '.jpeg'
+                    image_url = post['data'][0]['images']['standard_resolution']['url']
+                    urllib.urlretrieve(image_url, image_name)  # Downloading the post if its an image
+                    print "Image downloads successful"
+                elif post['data'][0]['type'] == "video":
+                    video_name = post['data'][0]['id'] + '.mp4'
+                    video_url = post['data'][0]['videos']['standard_resolution']['url']
+                    urllib.urlretrieve(video_url, video_name)  # Downloading the post if its a video
+                    print "Video downloads successful..."
+                else:
+                    print "No image  or video post to show..."
+            else:
+                print "Post does not  exist!"
+        else:
+            print "Status code other than 200 received!"
+#-----------------------------------------------------------------------------------------------------------------------#
+def media_id(username):
+    user_id = get_user_id(username)
+    if user_id is None:
+        print "User does not exist!"
+        exit()
+    else:
+        post = requests.get('%susers/%s/media/recent/?access_token=%s' % (BASE_URL, user_id, APP_ACCESS_TOKEN)).json()
+        if post['meta']['code'] == 200:
+            # To chack post exist or not
+            if len(post['data']) > 0:
+                #Returns media id
+                return post['data'][0]['id']
+            else:
+                print "Post does not exist!"
+        else:
+            print "Status code other than 200 received!"
+
+#-----------------------------------------------------------------------------------------------------------------------#
+def like_post(user_name):
+    umedia_id = media_id(user_name)
+    payload = {"access_token": APP_ACCESS_TOKEN}
+    url = '%smedia/%s/likes' % (BASE_URL, umedia_id)
+    post_a_like = requests.post(url, payload).json()
+    if post_a_like['meta']['code'] == 200:
+        print "Like was successful!"
+    else:
+        print "Your like was unsuccessful...Plzzzz try again!"
+
+#-----------------------------------------------------------------------------------------------------------------------#
+def comment_post(user_name):
+    umedia_id = media_id(user_name)
+    comment_text = raw_input("Your comment: ")
+    payload = {"access_token": APP_ACCESS_TOKEN, "text": comment_text}
+    url = '%smedia/%s/comments' % (BASE_URL, umedia_id)
+    make_comment = requests.post(url, payload).json()
+    if make_comment['meta']['code'] == 200:
+        print "Comment Done!"
+    else:
+        print "Failed to comment. Try again!"
 
 #-----------------------------------------------------------------------------------------------------------------------#
 
 while True:
-    menu_choice=input("Select the choice ::\n 1.Get User's Info. \n 2.Get Recent post of owner \n 3. Get Other User Info\n 4. Get User Recent Post \n 0. Exit ")
+    menu_choice=input("Select the choice ::\n 1.Get User's Info. \n 2.Get Recent post of owner \n 3. Get Other User Info\n 4. Get User Recent Post \n 5. Download User's recent post \n 6. Like a Post \n 7. Comment a Post\n 0. Exit ")
     if menu_choice==1:
 
          self_info()
@@ -185,7 +219,16 @@ while True:
          other_user_info(user_name)
     elif menu_choice==4:
          user_name=raw_input("Enter the user name ::")
-         user_recent_post(user_name)
+         get_user_post(user_name)
+    elif menu_choice == 5:
+         user_name = raw_input("\nEnter the username  :: ")
+         dwnld_user_post(user_name)  # Calling the download_user_post() method to download other user's post
+    elif menu_choice==6:
+         user_name=raw_input("\n Enter the username  ::")
+         like_post(user_name)
+    elif menu_choice==7:
+         user_name=raw_input("\n Enter the username  ::")
+         comment_post(user_name)
     elif menu_choice==0:
          exit()
     else:
